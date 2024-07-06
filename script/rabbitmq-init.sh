@@ -3,7 +3,7 @@
 # Espera o RabbitMQ iniciar completamente
 until rabbitmqctl status >/dev/null 2>&1; do
   echo "Waiting for RabbitMQ to start..."
-  sleep 1
+  sleep 10
 done
 
 # Declara a exchange
