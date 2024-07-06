@@ -12,8 +12,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class FileProcessorService {
@@ -41,22 +45,20 @@ public class FileProcessorService {
 
     public void processFile(UploadLog uploadLog) {
         Path filePath = Paths.get(processingDir, uploadLog.getFileName());
+        Map<Long, Users> users = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath.toFile()))) {
             String line;
             while ((line = br.readLine()) != null) {
-                processLine(line);
+                processarLinhaPedido(line, users);
             }
 
-            // Mover o arquivo para o diretório de concluídos
-            Files.move(filePath, Paths.get(completedDir, uploadLog.getFileName()));
+            usersRepository.saveAll(users.values());
 
-            // Atualizar o status do UploadLog
             uploadLog.setStatus(UploadLog.UploadStatus.PROCESSED);
             uploadLogRepository.save(uploadLog);
 
-            // Enviar dados processados para o webhook
-            webhookService.sendProcessedData();
+            // webhookService.sendProcessedData();
 
         } catch (IOException e) {
             uploadLog.setStatus(UploadLog.UploadStatus.ERROR);
@@ -64,47 +66,50 @@ public class FileProcessorService {
             uploadLogRepository.save(uploadLog);
             e.printStackTrace();
         }
+
+        try {
+            Files.move(filePath, Paths.get(completedDir, uploadLog.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            uploadLog.setStatus(UploadLog.UploadStatus.ERROR);
+            uploadLog.setErrorMessage("Erro ao mover o arquivo: " + e.getMessage());
+            uploadLogRepository.save(uploadLog);
+            e.printStackTrace();
+        }
     }
 
-    private void processLine(String line) {
-        String[] parts = line.split(";");
-        if (parts.length != 6) {
-            throw new IllegalArgumentException("Formato de linha inválido");
-        }
+    private void processarLinhaPedido(String line, Map<Long, Users> users) {
+        long userId = Long.parseLong(line.substring(0, 10).trim());
+        String userName = line.substring(10, 55).trim();
+        long orderId = Long.parseLong(line.substring(55, 65).trim());
+        long productId = Long.parseLong(line.substring(65, 75).trim());
+        double productValue = Double.parseDouble(line.substring(75, 87).trim());
+        LocalDate date = LocalDate.parse(line.substring(87, 95).trim(), DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        Long userId = Long.parseLong(parts[0]);
-        String userName = parts[1];
-        Long orderId = Long.parseLong(parts[2]);
-        LocalDate orderDate = LocalDate.parse(parts[3], DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        Long productId = Long.parseLong(parts[4]);
-        Double productValue = Double.parseDouble(parts[5]);
+        Users user = users.computeIfAbsent(userId, id -> new Users(userId, userName, new ArrayList<>()));
 
-        Users user = usersRepository.findById(userId).orElseGet(() -> {
-            Users newUser = new Users();
-            newUser.setUserId(userId);
-            newUser.setName(userName);
-            return usersRepository.save(newUser);
-        });
+        Orders order = user.getOrders().stream()
+                .filter(o -> o.getOrderId().getOrderId().equals(orderId))
+                .findFirst()
+                .orElseGet(() -> {
+                    OrderId newOrderId = new OrderId(orderId, userId);
+                    Orders newOrder = new Orders(newOrderId, user, date, 0.0, new ArrayList<>());
+                    user.getOrders().add(newOrder);
+                    return newOrder;
+                });
 
-        OrderId orderIdObj = new OrderId(orderId, userId);
-        Orders order = ordersRepository.findById(orderIdObj).orElseGet(() -> {
-            Orders newOrder = new Orders();
-            newOrder.setOrderId(orderIdObj);
-            newOrder.setUsers(user);
-            newOrder.setDate(orderDate);
-            newOrder.setTotal(0.0);
-            return ordersRepository.save(newOrder);
-        });
-
-        ProductId productIdObj = new ProductId(productId, orderId, userId);
-        Products product = new Products();
-        product.setProductId(productIdObj);
-        product.setOrder(order);
-        product.setValue(productValue);
-        productsRepository.save(product);
-
-        // Atualizar o total do pedido
         order.setTotal(order.getTotal() + productValue);
-        ordersRepository.save(order);
+
+        ProductId productIdKey = new ProductId(productId, orderId, userId);
+        Products product = order.getProducts().stream()
+                .filter(p -> p.getProductId().equals(productIdKey))
+                .findFirst()
+                .orElse(null);
+
+        if (product == null) {
+            product = new Products(productIdKey, order, productValue);
+            order.getProducts().add(product);
+        } else if (product.getValue() != productValue) {
+            product.setValue(productValue);
+        }
     }
 }
