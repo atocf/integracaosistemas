@@ -12,15 +12,16 @@ import lombok.NoArgsConstructor;
 @Table(name = "products")
 public class Products {
 
-    @EmbeddedId
-    private ProductId productId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-            @JoinColumn(name = "order_id", referencedColumnName = "order_id", insertable = false, updatable = false),
-            @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false)
-    })
+    @JoinColumn(name = "order_id")
     private Orders order;
+
+    @Column(name = "product_id")
+    private Long productId;
 
     @Column(name = "product_value")
     private Double value;

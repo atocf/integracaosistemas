@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -17,20 +16,25 @@ import java.util.List;
 @Table(name = "orders")
 public class Orders {
 
-    @EmbeddedId
-    private OrderId orderId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @ToString.Exclude
-    @MapsId("userId")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_id")
-    private Users users;
+    @JoinColumn(name = "user_id")
+    private Users user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "upload_log_id")
+    private UploadLog uploadLog;
+
+    @Column(name = "order_id")
+    private Long orderId;
 
     private LocalDate date;
 
     private Double total;
 
-    @ToString.Exclude
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Products> products = new ArrayList<>();
 }

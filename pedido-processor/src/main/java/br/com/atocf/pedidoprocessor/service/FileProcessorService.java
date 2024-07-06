@@ -2,6 +2,7 @@ package br.com.atocf.pedidoprocessor.service;
 
 import br.com.atocf.pedidoprocessor.model.entity.*;
 import br.com.atocf.pedidoprocessor.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class FileProcessorService {
@@ -50,7 +49,7 @@ public class FileProcessorService {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath.toFile()))) {
             String line;
             while ((line = br.readLine()) != null) {
-                processarLinhaPedido(line, users);
+                processarLinhaPedido(line, users, uploadLog);
             }
 
             usersRepository.saveAll(users.values());
@@ -77,7 +76,8 @@ public class FileProcessorService {
         }
     }
 
-    private void processarLinhaPedido(String line, Map<Long, Users> users) {
+    @Transactional
+    protected void processarLinhaPedido(String line, Map<Long, Users> users, UploadLog uploadLog) {
         long userId = Long.parseLong(line.substring(0, 10).trim());
         String userName = line.substring(10, 55).trim();
         long orderId = Long.parseLong(line.substring(55, 65).trim());
@@ -85,31 +85,30 @@ public class FileProcessorService {
         double productValue = Double.parseDouble(line.substring(75, 87).trim());
         LocalDate date = LocalDate.parse(line.substring(87, 95).trim(), DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        Users user = users.computeIfAbsent(userId, id -> new Users(userId, userName, new ArrayList<>()));
+        Users user = users.computeIfAbsent(userId, id -> {
+            Users newUser = usersRepository.findById(id).orElse(new Users());
+            newUser.setUserId(id);
+            newUser.setName(userName);
+            return usersRepository.save(newUser); // Salva o usuário imediatamente
+        });
 
-        Orders order = user.getOrders().stream()
-                .filter(o -> o.getOrderId().getOrderId().equals(orderId))
-                .findFirst()
-                .orElseGet(() -> {
-                    OrderId newOrderId = new OrderId(orderId, userId);
-                    Orders newOrder = new Orders(newOrderId, user, date, 0.0, new ArrayList<>());
-                    user.getOrders().add(newOrder);
-                    return newOrder;
-                });
+        Orders order = new Orders();
+        order.setUser(user);
+        order.setUploadLog(uploadLog);
+        order.setOrderId(orderId);
+        order.setDate(date);
+        order.setTotal(productValue);
 
-        order.setTotal(order.getTotal() + productValue);
+        Products product = new Products();
+        product.setOrder(order);
+        product.setProductId(productId);
+        product.setValue(productValue);
 
-        ProductId productIdKey = new ProductId(productId, orderId, userId);
-        Products product = order.getProducts().stream()
-                .filter(p -> p.getProductId().equals(productIdKey))
-                .findFirst()
-                .orElse(null);
+        order.setProducts(new ArrayList<>(List.of(product)));
 
-        if (product == null) {
-            product = new Products(productIdKey, order, productValue);
-            order.getProducts().add(product);
-        } else if (product.getValue() != productValue) {
-            product.setValue(productValue);
-        }
+        order = ordersRepository.save(order); // Salva o pedido
+
+        user.getOrders().add(order);
+        usersRepository.save(user);
     }
 }

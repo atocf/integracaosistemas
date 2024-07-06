@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -30,6 +32,9 @@ public class UploadLog {
 
     @Column(name = "error_message")
     private String errorMessage;
+
+    @OneToMany(mappedBy = "uploadLog", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Orders> orders = new ArrayList<>();
 
     public enum UploadStatus {
         PENDING, PROCESSED, ERROR
