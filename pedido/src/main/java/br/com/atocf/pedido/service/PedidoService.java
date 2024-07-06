@@ -52,8 +52,8 @@ public class PedidoService {
         uploadLog.setFileName(fileName);
         uploadLog.setUploadTimestamp(LocalDateTime.now());
         uploadLog.setStatus(UploadLog.UploadStatus.PENDING);
-        uploadLogRepository.save(uploadLog);
+        uploadLog = uploadLogRepository.save(uploadLog);
 
-        rabbitTemplate.convertAndSend(exchange, routingkey, fileName);
+        rabbitTemplate.convertAndSend(exchange, routingkey, uploadLog.getId().toString());
     }
 }
