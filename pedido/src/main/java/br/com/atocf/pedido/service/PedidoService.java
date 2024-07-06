@@ -2,15 +2,14 @@ package br.com.atocf.pedido.service;
 
 import br.com.atocf.pedido.model.entity.UploadLog;
 import br.com.atocf.pedido.repository.UploadLogRepository;
+import br.com.atocf.pedido.utils.FileOperations;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -25,6 +24,9 @@ public class PedidoService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private FileOperations fileOperations;
+
     @Value("${upload.dir:/app/upload_files}")
     private String uploadDir;
 
@@ -38,32 +40,20 @@ public class PedidoService {
     private String routingkey;
 
     public void uploadPedidoFile(MultipartFile file) throws IOException {
-        // Gerar um nome único para o arquivo
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
 
-        // Criar os diretórios necessários se não existirem
-        createDirectoryIfNotExists(uploadDir);
-        createDirectoryIfNotExists(processingDir);
+        fileOperations.createDirectoryIfNotExists(uploadDir);
+        fileOperations.createDirectoryIfNotExists(processingDir);
 
-        // Salvar o arquivo no diretório de upload
         Path filePath = Paths.get(processingDir, fileName);
-        Files.write(filePath, file.getBytes());
+        fileOperations.writeFile(filePath, file.getBytes());
 
-        // Criar e salvar o log de upload
         UploadLog uploadLog = new UploadLog();
         uploadLog.setFileName(fileName);
         uploadLog.setUploadTimestamp(LocalDateTime.now());
         uploadLog.setStatus(UploadLog.UploadStatus.PENDING);
         uploadLogRepository.save(uploadLog);
 
-        // Enviar mensagem para o RabbitMQ
         rabbitTemplate.convertAndSend(exchange, routingkey, fileName);
-    }
-
-    private void createDirectoryIfNotExists(String dirPath) {
-        File directory = new File(dirPath);
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
     }
 }
