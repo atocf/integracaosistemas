@@ -24,6 +24,7 @@ services:
     command: [ "/bin/bash", "-c", "rabbitmq-server & sleep 10 && /usr/local/bin/rabbitmq-init.sh && wait" ]
 
   pedido:
+    container_name: pedido
     build:
       context: ./pedido
       dockerfile: Dockerfile
@@ -41,10 +42,34 @@ services:
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
-      - PROCESSING_DIRECTORY=/app/upload_files/processing
-      - COMPLETED_DIRECTORY=/app/upload_files/completed
       - RABBITMQ_EXCHANGE=pedido-exchange
       - RABBITMQ_ROUTINGKEY=pedido-routing-key
+
+  pedido-processor:
+    container_name: pedido-processor
+    build:
+      context: ./pedido-processor
+      dockerfile: Dockerfile
+    ports:
+      - "9080:9080"
+    depends_on:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./upload_files:/app/upload_files
+    environment:
+      - SERVER_PORT=9080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido
+      - SPRING_DATASOURCE_USERNAME=luizalabs
+      - SPRING_DATASOURCE_PASSWORD=luizalabs
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+
+      - RABBITMQ_QUEUE_NAME=pedido-queue
+      - RABBITMQ_EXCHANGE_NAME=pedido-exchange
+      - RABBITMQ_ROUTING_KEY=pedido-routing-key
+      - WEBHOOK_URL=http://webhook-service:8080/receive
 
 volumes:
   db_data:
