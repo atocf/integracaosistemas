@@ -37,10 +37,10 @@ public class FileProcessorService {
     private WebhookService webhookService;
 
     @Value("${upload.processing.dir}")
-    private String processingDir;
+    protected String processingDir;
 
     @Value("${upload.completed.dir}")
-    private String completedDir;
+    protected String completedDir;
 
     public void processFile(UploadLog uploadLog) {
         Path filePath = Paths.get(processingDir, uploadLog.getFileName());
@@ -78,6 +78,11 @@ public class FileProcessorService {
 
     @Transactional
     protected void processarLinhaPedido(String line, Map<Long, Users> users, UploadLog uploadLog) {
+
+        if (line.length() < 95) {
+            throw new IllegalArgumentException("Linha muito curta: " + line);
+        }
+
         long userId = Long.parseLong(line.substring(0, 10).trim());
         String userName = line.substring(10, 55).trim();
         long orderId = Long.parseLong(line.substring(55, 65).trim());
@@ -89,7 +94,7 @@ public class FileProcessorService {
             Users newUser = usersRepository.findById(id).orElse(new Users());
             newUser.setUserId(id);
             newUser.setName(userName);
-            return usersRepository.save(newUser); // Salva o usuário imediatamente
+            return usersRepository.save(newUser);
         });
 
         Orders order = new Orders();
