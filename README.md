@@ -20,27 +20,31 @@ O sistema foi desenvolvido utilizando as seguintes tecnologias:
 ## Execução do Projeto
 Para executar o projeto localmente, siga as etapas abaixo:
 
-Clone o repositório:
+1. Clone o repositório:
 ```bash    
 git clone https://github.com/atocf/integracaosistemas
 ```
 
-Acesse o diretório do projeto:
+2. Acesse o diretório do projeto:
 ```bash    
 cd ./integracaosistemas
 ```
 
-Suba os containers Docker:
+3. Suba os containers Docker:
 ```bash 
 docker-compose up -d
 ```
 
-Acesse a documentação da API:
+4. Acesse a documentação da API:
 
 Após a inicialização completa dos serviços, a documentação da API estará disponível em:
 
 http://localhost:9090/swagger-ui/index.html
 
+5. Parar os containers Docker:
+```bash 
+docker-compose down
+```
 ## Detalhes da Implementação
 ### API REST: 
 A API foi construída utilizando o Spring Boot, e oferece endpoints para o envio do arquivo de pedidos e consulta dos pedidos processados.
