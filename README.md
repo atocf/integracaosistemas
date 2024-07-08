@@ -3,14 +3,19 @@
 Este projeto consiste em um sistema backend desenvolvido para solucionar o desafio técnico proposto pela LuizaLabs para a Vertical de Logística. O sistema tem como objetivo realizar a leitura, processamento e normalização de um arquivo de pedidos desnormalizado, fornecido em um formato específico, e disponibilizá-lo através de uma API REST.
 
 ## Requisitos
+Para executar o projeto localmente, você precisará ter instalado:
+
+- Docker: https://docs.docker.com/get-docker/
+- Java 17: https://www.oracle.com/java/technologies/downloads/#java17
+
 O sistema foi desenvolvido utilizando as seguintes tecnologias:
 
-Linguagem de Programação: Java
-Framework: Spring Boot
-Gerenciador de Dependências: Maven
-Banco de Dados: PostgreSQL
-Mensageria: RabbitMQ
-Contêinerização: Docker
+- Linguagem de Programação: Java
+- Framework: Spring Boot
+- Gerenciador de Dependências: Maven
+- Banco de Dados: PostgreSQL
+- Mensageria: RabbitMQ
+- Contêinerização: Docker
 
 ## Execução do Projeto
 Para executar o projeto localmente, siga as etapas abaixo:
