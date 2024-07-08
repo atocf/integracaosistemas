@@ -22,6 +22,7 @@ public class Users {
     @Column(length = 45)
     private String name;
 
+    @ToString.Exclude
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Orders> orders = new ArrayList<>();
 }

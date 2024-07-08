@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,17 +37,10 @@ public class FileProcessorServiceTest {
     @InjectMocks
     private FileProcessorService fileProcessorService;
 
-    @Value("${upload.processing.dir}")
-    private String processingDir;
-
-    @Value("${upload.completed.dir}")
-    private String completedDir;
-
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Inicializar as variáveis de diretório
         fileProcessorService.processingDir = "../upload_files/processing";
         fileProcessorService.completedDir = "../upload_files/completed";
     }
@@ -63,18 +55,26 @@ public class FileProcessorServiceTest {
 
         Path filePath = Paths.get(fileProcessorService.processingDir, uploadLog.getFileName());
         Files.createDirectories(filePath.getParent());
-        Files.write(filePath, "0000000070                              Palmer Prosacco00000007530000000003     1836.7420210308".getBytes());
+        Files.write(filePath, (
+                "0000000070                              Palmer Prosacco00000007530000000003     1836.7420210308\n" +
+                        "0000000070                              Palmer Prosacco00000007530000000004      973.2320210308"
+        ).getBytes());
 
         Users user = new Users();
-        user.setUserId(1234567890L);
-        user.setName("User Name");
-        user.setOrders(new ArrayList<>()); // Inicializar a lista de pedidos
-        when(usersRepository.findById(1234567890L)).thenReturn(Optional.of(user));
+        user.setUserId(70L);
+        user.setName("Palmer Prosacco");
+        user.setOrders(new ArrayList<>());
+        when(usersRepository.findById(70L)).thenReturn(Optional.of(user));
         when(usersRepository.save(any(Users.class))).thenReturn(user);
 
         fileProcessorService.processFile(uploadLog);
 
-        verify(usersRepository, times(1)).saveAll(anyCollection());
+        verify(usersRepository, atLeastOnce()).save(any(Users.class));
+
+        verify(ordersRepository, times(1)).save(any(Orders.class));
+
+        verify(productsRepository, times(2)).save(any(Products.class));
+
         verify(uploadLogRepository, times(1)).save(uploadLog);
     }
 
@@ -82,19 +82,27 @@ public class FileProcessorServiceTest {
     public void testProcessarLinhaPedido() {
         Map<Long, Users> users = new HashMap<>();
         UploadLog uploadLog = new UploadLog();
-        String line = "0000000070                              Palmer Prosacco00000007530000000003     1836.7420210308";
+        String line1 = "0000000070                              Palmer Prosacco00000007530000000003     1836.7420210308";
+        String line2 = "0000000070                              Palmer Prosacco00000007530000000004      973.2320210308";
 
         Users user = new Users();
-        user.setUserId(1234567890L);
-        user.setName("User Name");
-        user.setOrders(new ArrayList<>()); // Inicializar a lista de pedidos
+        user.setUserId(70L);
+        user.setName("Palmer Prosacco");
+        user.setOrders(new ArrayList<>());
 
-        when(usersRepository.findById(1234567890L)).thenReturn(Optional.of(user));
+        when(usersRepository.findById(70L)).thenReturn(Optional.of(user));
         when(usersRepository.save(any(Users.class))).thenReturn(user);
 
-        fileProcessorService.processarLinhaPedido(line, users, uploadLog);
+        fileProcessorService.processarLinhaPedido(line1, users, uploadLog);
+        fileProcessorService.processarLinhaPedido(line2, users, uploadLog);
 
-        verify(usersRepository, times(2)).save(any(Users.class)); // Esperar duas chamadas
-        verify(ordersRepository, times(1)).save(any(Orders.class));
+        verify(usersRepository, times(1)).save(any(Users.class));
+
+        assert user.getOrders().size() == 1;
+
+        Orders order = user.getOrders().get(0);
+
+        assert order.getProducts().size() == 2;
+        assert order.getTotal() == 1836.74 + 973.23;
     }
 }
