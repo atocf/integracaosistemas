@@ -15,16 +15,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,26 +80,29 @@ public class PedidoService {
         rabbitTemplate.convertAndSend(exchange, routingkey, uploadLog.getId().toString());
     }
 
-    public List<PedidoDto> consultarPedidos(Long orderId, LocalDateTime dataInicio, LocalDateTime dataFim) {
-        // Primeiro, buscamos os pedidos
-        List<Orders> orders = ordersRepository.findByOrderId(orderId);
+    public List<PedidoDto> consultarPedidos(Long orderId, LocalDate dataInicio, LocalDate dataFim) {
 
-        // Criamos uma lista para armazenar os PedidoDto
+        List<Orders> orders;
+        
+        if (orderId != null && dataInicio != null && dataFim != null) {
+            orders = ordersRepository.findByOrderIdAndDateRange(orderId, dataInicio, dataFim);
+        } else if (dataInicio != null && dataFim != null) {
+            orders = ordersRepository.findByDateRange(dataInicio, dataFim);
+        } else {
+            orders = ordersRepository.findByOrderId(orderId);
+        }
+
         List<PedidoDto> pedidoDtos = new ArrayList<>();
 
         for (Orders order : orders) {
-            // Buscamos o usuário vinculado ao pedido
             Users user = usersRepository.findById(order.getUserId())
                     .orElseThrow(() -> new RuntimeException("Usuário não encontrado para o pedido: " + order.getOrderId()));
 
-            // Buscamos o upload log vinculado ao pedido
             UploadLog uploadLog = uploadLogRepository.findById(order.getUploadLogId())
                     .orElseThrow(() -> new RuntimeException("Upload log não encontrado para o pedido: " + order.getOrderId()));
 
-            // Buscamos os produtos vinculados ao pedido
             List<Products> products = productsRepository.findByOrderId(order.getId());
 
-            // Criamos um novo PedidoDto com todas as informações
             PedidoDto pedidoDto = new PedidoDto(
                     user,
                     uploadLog,

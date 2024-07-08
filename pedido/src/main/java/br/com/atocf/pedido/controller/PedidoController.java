@@ -2,8 +2,6 @@ package br.com.atocf.pedido.controller;
 
 import br.com.atocf.pedido.model.dto.PedidoDto;
 import br.com.atocf.pedido.model.dto.SuccessResponse;
-import br.com.atocf.pedido.model.entity.Orders;
-import br.com.atocf.pedido.model.entity.Users;
 import br.com.atocf.pedido.model.error.ErrorResponse;
 import br.com.atocf.pedido.service.PedidoService;
 import br.com.atocf.pedido.model.error.ErrorObject;
@@ -16,7 +14,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -26,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -73,11 +71,33 @@ public class PedidoController {
     }
 
     @GetMapping
-    public List<PedidoDto> consultarPedidos(
+    public ResponseEntity<?> consultarPedidos(
             @RequestParam(required = false) Long orderId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate dataFim) {
 
-        return service.consultarPedidos(orderId, dataInicio, dataFim);
+        ErrorObject errorObject = null;
+
+        if (dataInicio != null && (dataFim == null || dataFim.toString().trim().isEmpty())) {
+            errorObject = new ErrorObject("O campo dataFim é obrigatório e não pode ser nulo ou vazio quando dataInicio é fornecido.", "dataFim", dataFim);
+        } else if (dataFim != null && (dataInicio == null || dataInicio.toString().trim().isEmpty())) {
+            errorObject = new ErrorObject("O campo dataInicio é obrigatório e não pode ser nulo ou vazio quando dataFim é fornecido.", "dataInicio", dataInicio);
+        } else if (dataInicio != null && dataInicio.isAfter(dataFim)) {
+            errorObject = new ErrorObject("A data de início deve ser anterior à data de fim.", "dataInicio", dataInicio);
+        } else if (dataInicio == null && (orderId == null || orderId.toString().trim().isEmpty())) {
+            errorObject = new ErrorObject("O campo orderId é obrigatório e não pode ser nulo ou vazio quando dataInicio e dataFim não são fornecidos.", "orderId", orderId);
+        }
+
+        if(errorObject != null) {
+            ErrorResponse errorResponse = RestExceptionCustom.getErrorResponse("consultarPedidos", HttpStatus.BAD_REQUEST, errorObject);
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+
+        List<PedidoDto> pedidos = service.consultarPedidos(orderId, dataInicio, dataFim);
+        if(pedidos.isEmpty()){
+            return new ResponseEntity<>(pedidos, HttpStatus.NOT_FOUND);
+        } else {
+            return ResponseEntity.ok(pedidos);
+        }
     }
 }
