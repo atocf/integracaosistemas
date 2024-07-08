@@ -37,10 +37,10 @@ public class FileProcessorService {
     private WebhookService webhookService;
 
     @Value("${upload.processing.dir}")
-    private String processingDir;
+    protected String processingDir;
 
     @Value("${upload.completed.dir}")
-    private String completedDir;
+    protected String completedDir;
 
     public void processFile(UploadLog uploadLog) {
         Path filePath = Paths.get(processingDir, uploadLog.getFileName());
@@ -52,7 +52,16 @@ public class FileProcessorService {
                 processarLinhaPedido(line, users, uploadLog);
             }
 
-            usersRepository.saveAll(users.values());
+            // Salva todos os usuários e seus pedidos
+            for (Users user : users.values()) {
+                for (Orders order : user.getOrders()) {
+                    ordersRepository.save(order);
+                    for (Products product : order.getProducts()) {
+                        productsRepository.save(product);
+                    }
+                }
+                usersRepository.save(user);
+            }
 
             uploadLog.setStatus(UploadLog.UploadStatus.PROCESSED);
             uploadLogRepository.save(uploadLog);
@@ -78,6 +87,10 @@ public class FileProcessorService {
 
     @Transactional
     protected void processarLinhaPedido(String line, Map<Long, Users> users, UploadLog uploadLog) {
+        if (line.length() < 95) {
+            throw new IllegalArgumentException("Linha muito curta: " + line);
+        }
+
         long userId = Long.parseLong(line.substring(0, 10).trim());
         String userName = line.substring(10, 55).trim();
         long orderId = Long.parseLong(line.substring(55, 65).trim());
@@ -89,26 +102,30 @@ public class FileProcessorService {
             Users newUser = usersRepository.findById(id).orElse(new Users());
             newUser.setUserId(id);
             newUser.setName(userName);
-            return usersRepository.save(newUser); // Salva o usuário imediatamente
+            return usersRepository.save(newUser);
         });
 
-        Orders order = new Orders();
-        order.setUser(user);
-        order.setUploadLog(uploadLog);
-        order.setOrderId(orderId);
-        order.setDate(date);
-        order.setTotal(productValue);
+        Orders order = user.getOrders().stream()
+                .filter(o -> o.getOrderId().equals(orderId))
+                .findFirst()
+                .orElseGet(() -> {
+                    Orders newOrder = new Orders();
+                    newOrder.setUser(user);
+                    newOrder.setUploadLog(uploadLog);
+                    newOrder.setOrderId(orderId);
+                    newOrder.setDate(date);
+                    newOrder.setTotal(0.0);
+                    newOrder.setProducts(new ArrayList<>());
+                    user.getOrders().add(newOrder);
+                    return newOrder;
+                });
 
         Products product = new Products();
         product.setOrder(order);
         product.setProductId(productId);
         product.setValue(productValue);
 
-        order.setProducts(new ArrayList<>(List.of(product)));
-
-        order = ordersRepository.save(order); // Salva o pedido
-
-        user.getOrders().add(order);
-        usersRepository.save(user);
+        order.getProducts().add(product);
+        order.setTotal(order.getTotal() + productValue);
     }
 }

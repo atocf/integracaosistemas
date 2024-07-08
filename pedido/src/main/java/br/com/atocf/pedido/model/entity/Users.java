@@ -1,10 +1,9 @@
-package br.com.atocf.pedidoprocessor.model.entity;
+package br.com.atocf.pedido.model.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,8 +20,4 @@ public class Users {
 
     @Column(length = 45)
     private String name;
-
-    @ToString.Exclude
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Orders> orders = new ArrayList<>();
 }

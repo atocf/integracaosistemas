@@ -8,7 +8,8 @@ RUN mvn dependency:go-offline
 
 # Copiar o código-fonte e construir o aplicativo
 COPY src ./src
-RUN mvn package -DskipTests
+RUN mvn clean
+RUN mvn clean package -DskipTests
 
 # Estágio final
 FROM openjdk:17-jdk-slim
@@ -20,7 +21,7 @@ COPY --from=build /app/target/*.jar app.jar
 # Criar diretórios necessários
 RUN mkdir -p /app/upload_files/processing /app/upload_files/completed
 
-# Expor a porta da aplicação (se necessário)
+# Expor a porta da aplicação
 EXPOSE 9080
 
 # Comando para executar a aplicação

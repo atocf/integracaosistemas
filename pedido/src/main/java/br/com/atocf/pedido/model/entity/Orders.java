@@ -1,10 +1,12 @@
-package br.com.atocf.pedidoprocessor.model.entity;
+package br.com.atocf.pedido.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -21,14 +23,11 @@ public class Orders {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    @ToString.Exclude
-    private Users user;
+    @Column(name = "user_id")
+    private Long userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "upload_log_id")
-    private UploadLog uploadLog;
+    @Column(name = "upload_log_id")
+    private Long uploadLogId;
 
     @Column(name = "order_id")
     private Long orderId;
@@ -36,7 +35,4 @@ public class Orders {
     private LocalDate date;
 
     private Double total;
-
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Products> products = new ArrayList<>();
 }
