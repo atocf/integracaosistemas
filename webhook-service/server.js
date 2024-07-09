@@ -23,6 +23,9 @@ app.post('/receive', (req, res) => {
 
 // Rota para exibir a página HTML
 app.get('/', (req, res) => {
+    // Ordena o histórico em ordem decrescente de timestamp
+    payloadsHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
     const payloadsList = payloadsHistory.map(
         (item) => `
       <li>
