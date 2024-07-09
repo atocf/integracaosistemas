@@ -44,7 +44,9 @@ public class WebhookService {
             HttpEntity<String> entity = new HttpEntity<>(jsonPayload, headers);
             restTemplate.exchange(webhookUrl, HttpMethod.POST, entity, String.class);
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            log.error("Erro ao processar JSON", e);
+        } catch (Exception e) {
+            log.error("Erro ao enviar dados", e);
         }
     }
 }

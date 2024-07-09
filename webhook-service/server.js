@@ -4,6 +4,10 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 8080;
 
+// Aumentar o limite do tamanho do payload para 50MB
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 // Array para armazenar o histórico de payloads recebidos
 const payloadsHistory = [];
 
