@@ -90,17 +90,18 @@ public class FileProcessorServiceTest {
         user.setName("Palmer Prosacco");
         user.setOrders(new ArrayList<>());
 
-        when(usersRepository.findById(70L)).thenReturn(Optional.of(user));
-        when(usersRepository.save(any(Users.class))).thenReturn(user);
+        when(usersRepository.findById(70L)).thenReturn(Optional.empty());
 
         fileProcessorService.processarLinhaPedido(line1, users, uploadLog);
         fileProcessorService.processarLinhaPedido(line2, users, uploadLog);
 
-        verify(usersRepository, times(1)).save(any(Users.class));
+        assert users.containsKey(70L);
 
-        assert user.getOrders().size() == 1;
+        Users savedUser = users.get(70L);
+        assert savedUser != null;
+        assert savedUser.getOrders().size() == 1;
 
-        Orders order = user.getOrders().get(0);
+        Orders order = savedUser.getOrders().get(0);
 
         assert order.getProducts().size() == 2;
         assert order.getTotal() == 1836.74 + 973.23;
