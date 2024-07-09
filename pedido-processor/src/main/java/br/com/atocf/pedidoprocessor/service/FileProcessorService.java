@@ -3,6 +3,8 @@ package br.com.atocf.pedidoprocessor.service;
 import br.com.atocf.pedidoprocessor.model.entity.*;
 import br.com.atocf.pedidoprocessor.repository.*;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -42,9 +44,14 @@ public class FileProcessorService {
     @Value("${upload.completed.dir}")
     protected String completedDir;
 
+    private static final Logger log = LoggerFactory.getLogger(FileProcessorService.class);
+
     public void processFile(UploadLog uploadLog) {
+
         Path filePath = Paths.get(processingDir, uploadLog.getFileName());
         Map<Long, Users> users = new HashMap<>();
+
+        log.info("Iniciado processo de leitura do arquivo {}", filePath.getFileName());
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath.toFile()))) {
             String line;
@@ -52,7 +59,6 @@ public class FileProcessorService {
                 processarLinhaPedido(line, users, uploadLog);
             }
 
-            // Salva todos os usuários e seus pedidos
             for (Users user : users.values()) {
                 for (Orders order : user.getOrders()) {
                     ordersRepository.save(order);
@@ -66,7 +72,7 @@ public class FileProcessorService {
             uploadLog.setStatus(UploadLog.UploadStatus.PROCESSED);
             uploadLogRepository.save(uploadLog);
 
-            // webhookService.sendProcessedData();
+            log.info("Finalizado o processamento do arquivo");
 
         } catch (IOException e) {
             uploadLog.setStatus(UploadLog.UploadStatus.ERROR);
@@ -83,10 +89,15 @@ public class FileProcessorService {
             uploadLogRepository.save(uploadLog);
             e.printStackTrace();
         }
+
+        webhookService.sendProcessedData(users);
     }
 
     @Transactional
     protected void processarLinhaPedido(String line, Map<Long, Users> users, UploadLog uploadLog) {
+
+        log.info("Processando a linha do pedido {}", line);
+
         if (line.length() < 95) {
             throw new IllegalArgumentException("Linha muito curta: " + line);
         }
@@ -99,10 +110,11 @@ public class FileProcessorService {
         LocalDate date = LocalDate.parse(line.substring(87, 95).trim(), DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         Users user = users.computeIfAbsent(userId, id -> {
-            Users newUser = usersRepository.findById(id).orElse(new Users());
+            Users newUser = new Users();
             newUser.setUserId(id);
             newUser.setName(userName);
-            return usersRepository.save(newUser);
+            newUser.setOrders(new ArrayList<>());
+            return newUser;
         });
 
         Orders order = user.getOrders().stream()
@@ -127,5 +139,7 @@ public class FileProcessorService {
 
         order.getProducts().add(product);
         order.setTotal(order.getTotal() + productValue);
+
+        log.info("Finalizado o processamento da linha do pedido");
     }
 }

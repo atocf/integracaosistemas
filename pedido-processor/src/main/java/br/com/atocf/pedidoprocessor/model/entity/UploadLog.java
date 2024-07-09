@@ -1,5 +1,6 @@
 package br.com.atocf.pedidoprocessor.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -34,6 +35,7 @@ public class UploadLog {
     private String errorMessage;
 
     @OneToMany(mappedBy = "uploadLog", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Orders> orders = new ArrayList<>();
 
     public enum UploadStatus {
