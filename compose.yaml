@@ -56,6 +56,7 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+      - webhook-service
     volumes:
       - ./upload_files/processing:/app/upload_files/processing
       - ./upload_files/completed:/app/upload_files/completed
@@ -71,6 +72,20 @@ services:
       - RABBITMQ_EXCHANGE_NAME=pedido-exchange
       - RABBITMQ_ROUTING_KEY=pedido-routing-key
       - WEBHOOK_URL=http://webhook-service:8080/receive
+
+  webhook-service:
+    container_name: webhook-service
+    image: node:14
+    working_dir: /app
+    volumes:
+      - ./webhook-service:/app
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "npm install express body-parser &&
+             node server.js"
+    environment:
+      - PORT=8080
 
 volumes:
   db_data:
