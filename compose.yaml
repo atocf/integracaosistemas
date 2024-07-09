@@ -10,12 +10,6 @@ services:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
 
   rabbitmq:
     image: rabbitmq:management
@@ -29,15 +23,6 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     command: [ "/bin/bash", "/scripts/entrypoint.sh" ]
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:15672" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   pedido:
     container_name: pedido
@@ -47,8 +32,8 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      - postgres
+      - rabbitmq
     volumes:
       - ./upload_files:/app/upload_files
     environment:
@@ -69,10 +54,11 @@ services:
     ports:
       - "9080:9080"
     depends_on:
-      rabbitmq:
-        condition: service_healthy
+      - postgres
+      - rabbitmq
     volumes:
-      - ./upload_files:/app/upload_files
+      - ./upload_files/processing:/app/upload_files/processing
+      - ./upload_files/completed:/app/upload_files/completed
     environment:
       - SERVER_PORT=9080
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido
