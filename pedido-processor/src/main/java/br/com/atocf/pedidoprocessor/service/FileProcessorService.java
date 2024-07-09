@@ -46,8 +46,8 @@ public class FileProcessorService {
 
     private static final Logger log = LoggerFactory.getLogger(FileProcessorService.class);
 
+    @Transactional
     public void processFile(UploadLog uploadLog) {
-
         Path filePath = Paths.get(processingDir, uploadLog.getFileName());
         Map<Long, Users> users = new HashMap<>();
 
@@ -59,14 +59,15 @@ public class FileProcessorService {
                 processarLinhaPedido(line, users, uploadLog);
             }
 
+            // Salva todos os usuários e pedidos
             for (Users user : users.values()) {
+                usersRepository.save(user);
                 for (Orders order : user.getOrders()) {
                     ordersRepository.save(order);
                     for (Products product : order.getProducts()) {
                         productsRepository.save(product);
                     }
                 }
-                usersRepository.save(user);
             }
 
             uploadLog.setStatus(UploadLog.UploadStatus.PROCESSED);
@@ -78,7 +79,7 @@ public class FileProcessorService {
             uploadLog.setStatus(UploadLog.UploadStatus.ERROR);
             uploadLog.setErrorMessage("Erro ao processar o arquivo: " + e.getMessage());
             uploadLogRepository.save(uploadLog);
-            e.printStackTrace();
+            log.error("Erro ao processar o arquivo", e);
         }
 
         try {
@@ -87,7 +88,7 @@ public class FileProcessorService {
             uploadLog.setStatus(UploadLog.UploadStatus.ERROR);
             uploadLog.setErrorMessage("Erro ao mover o arquivo: " + e.getMessage());
             uploadLogRepository.save(uploadLog);
-            e.printStackTrace();
+            log.error("Erro ao mover o arquivo", e);
         }
 
         webhookService.sendProcessedData(users);
@@ -110,12 +111,18 @@ public class FileProcessorService {
         LocalDate date = LocalDate.parse(line.substring(87, 95).trim(), DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         Users user = users.computeIfAbsent(userId, id -> {
+            Users existingUser = usersRepository.findByUserId(id);
+            if (existingUser != null) {
+                return existingUser;
+            }
             Users newUser = new Users();
             newUser.setUserId(id);
             newUser.setName(userName);
             newUser.setOrders(new ArrayList<>());
             return newUser;
         });
+
+        user.setName(userName);
 
         Orders order = user.getOrders().stream()
                 .filter(o -> o.getOrderId().equals(orderId))

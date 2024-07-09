@@ -11,14 +11,14 @@ import java.time.format.DateTimeParseException;
 @Component
 public class StringToLocalDateConverter implements Converter<String, LocalDate> {
 
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Override
     public LocalDate convert(String source) {
         try {
             return LocalDate.parse(source, DATE_FORMATTER);
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Formato de data inválido. Use 'dd/MM/yyyy'.");
+            throw new IllegalArgumentException("Formato de data inválido. Use 'yyyy-MM-dd'.");
         }
     }
 }

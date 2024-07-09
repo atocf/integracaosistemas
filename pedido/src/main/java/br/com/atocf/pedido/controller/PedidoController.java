@@ -73,8 +73,8 @@ public class PedidoController {
     @GetMapping
     public ResponseEntity<?> consultarPedidos(
             @RequestParam(required = false) Long orderId,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate dataInicio,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "dd/MM/yyyy") LocalDate dataFim) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataFim) {
 
         ErrorObject errorObject = null;
 

@@ -23,7 +23,7 @@ public class Orders {
     @JsonIgnore
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "user_id")
     @ToString.Exclude
     @JsonBackReference
