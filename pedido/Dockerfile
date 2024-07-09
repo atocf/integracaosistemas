@@ -18,7 +18,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Criar diretórios necessários
-RUN mkdir -p /app/upload_files/processing /app/upload_files/completed
+RUN mkdir -p /app/upload_files/processing
 
 # Expor a porta da aplicação
 EXPOSE 9090
