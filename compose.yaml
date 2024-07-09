@@ -6,8 +6,10 @@ services:
       POSTGRES_USER: luizalabs
       POSTGRES_PASSWORD: luizalabs
       POSTGRES_DB: pedido
+      TZ: America/Sao_Paulo
     volumes:
       - db_data:/var/lib/postgresql/data
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     ports:
       - "5432:5432"
 
@@ -19,9 +21,11 @@ services:
     volumes:
       - ./script/rabbitmq-init.sh:/scripts/rabbitmq-init.sh
       - ./script/entrypoint.sh:/scripts/entrypoint.sh
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+      - TZ=America/Sao_Paulo
     command: [ "/bin/bash", "/scripts/entrypoint.sh" ]
 
   pedido:
@@ -36,6 +40,7 @@ services:
       - rabbitmq
     volumes:
       - ./upload_files:/app/upload_files
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido
       - SPRING_DATASOURCE_USERNAME=luizalabs
@@ -45,6 +50,7 @@ services:
       - SPRING_RABBITMQ_PASSWORD=guest
       - RABBITMQ_EXCHANGE=pedido-exchange
       - RABBITMQ_ROUTINGKEY=pedido-routing-key
+      - TZ=America/Sao_Paulo
 
   pedido-processor:
     container_name: pedido-processor
@@ -56,9 +62,11 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+      - webhook-service
     volumes:
       - ./upload_files/processing:/app/upload_files/processing
       - ./upload_files/completed:/app/upload_files/completed
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       - SERVER_PORT=9080
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/pedido
@@ -71,6 +79,23 @@ services:
       - RABBITMQ_EXCHANGE_NAME=pedido-exchange
       - RABBITMQ_ROUTING_KEY=pedido-routing-key
       - WEBHOOK_URL=http://webhook-service:8080/receive
+      - TZ=America/Sao_Paulo
+
+  webhook-service:
+    container_name: webhook-service
+    image: node:14
+    working_dir: /app
+    volumes:
+      - ./webhook-service:/app
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "npm install express body-parser &&
+             node server.js"
+    environment:
+      - PORT=8080
+      - TZ=America/Sao_Paulo
 
 volumes:
   db_data:

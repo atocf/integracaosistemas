@@ -1,5 +1,7 @@
 package br.com.atocf.pedidoprocessor.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,6 +19,7 @@ import java.util.List;
 public class Users {
     @Id
     @Column(name = "user_id")
+    @JsonProperty("user_id")
     private Long userId;
 
     @Column(length = 45)
@@ -24,5 +27,6 @@ public class Users {
 
     @ToString.Exclude
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<Orders> orders = new ArrayList<>();
 }
