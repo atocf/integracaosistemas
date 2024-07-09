@@ -34,14 +34,21 @@ cd ./integracaosistemas
 ```bash 
 docker-compose up -d
 ```
-
+ou
+```bash 
+docker-compose up --build
+```
 4. Acesse a documentação da API:
 
 Após a inicialização completa dos serviços, a documentação da API estará disponível em:
 
 http://localhost:9090/swagger-ui/index.html
 
-5. Parar os containers Docker:
+5. Acessar o rabbitMQ
+
+http://localhost:15672
+
+6. Parar os containers Docker:
 ```bash 
 docker-compose down
 ```

@@ -17,11 +17,12 @@ services:
       - "5672:5672"
       - "15672:15672"
     volumes:
-      - ./script/rabbitmq-init.sh:/usr/local/bin/rabbitmq-init.sh
+      - ./script/rabbitmq-init.sh:/scripts/rabbitmq-init.sh
+      - ./script/entrypoint.sh:/scripts/entrypoint.sh
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
-    command: [ "/bin/bash", "-c", "rabbitmq-server & sleep 10 && /usr/local/bin/rabbitmq-init.sh && wait" ]
+    command: [ "/bin/bash", "/scripts/entrypoint.sh" ]
 
   pedido:
     container_name: pedido
@@ -65,7 +66,6 @@ services:
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
-
       - RABBITMQ_QUEUE_NAME=pedido-queue
       - RABBITMQ_EXCHANGE_NAME=pedido-exchange
       - RABBITMQ_ROUTING_KEY=pedido-routing-key
