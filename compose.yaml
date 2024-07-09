@@ -35,6 +35,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   pedido:
     container_name: pedido
@@ -44,8 +47,6 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      postgres:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     volumes:
@@ -68,8 +69,6 @@ services:
     ports:
       - "9080:9080"
     depends_on:
-      postgres:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     volumes:
