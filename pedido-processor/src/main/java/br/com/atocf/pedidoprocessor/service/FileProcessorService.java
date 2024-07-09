@@ -59,16 +59,7 @@ public class FileProcessorService {
                 processarLinhaPedido(line, users, uploadLog);
             }
 
-            // Salva todos os usuários e pedidos
-            for (Users user : users.values()) {
-                usersRepository.save(user);
-                for (Orders order : user.getOrders()) {
-                    ordersRepository.save(order);
-                    for (Products product : order.getProducts()) {
-                        productsRepository.save(product);
-                    }
-                }
-            }
+            usersRepository.saveAll(users.values());
 
             uploadLog.setStatus(UploadLog.UploadStatus.PROCESSED);
             uploadLogRepository.save(uploadLog);
@@ -96,7 +87,6 @@ public class FileProcessorService {
 
     @Transactional
     protected void processarLinhaPedido(String line, Map<Long, Users> users, UploadLog uploadLog) {
-
         log.info("Processando a linha do pedido {}", line);
 
         if (line.length() < 95) {
@@ -110,41 +100,37 @@ public class FileProcessorService {
         double productValue = Double.parseDouble(line.substring(75, 87).trim());
         LocalDate date = LocalDate.parse(line.substring(87, 95).trim(), DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        Users user = users.computeIfAbsent(userId, id -> {
-            Users existingUser = usersRepository.findByUserId(id);
-            if (existingUser != null) {
-                return existingUser;
-            }
+        // Obter ou criar usuário
+        Users user = users.computeIfAbsent(userId, k -> {
             Users newUser = new Users();
-            newUser.setUserId(id);
+            newUser.setUserId(userId);
             newUser.setName(userName);
-            newUser.setOrders(new ArrayList<>());
             return newUser;
         });
 
-        user.setName(userName);
-
+        // Obter ou criar pedido
         Orders order = user.getOrders().stream()
                 .filter(o -> o.getOrderId().equals(orderId))
                 .findFirst()
                 .orElseGet(() -> {
                     Orders newOrder = new Orders();
-                    newOrder.setUser(user);
-                    newOrder.setUploadLog(uploadLog);
                     newOrder.setOrderId(orderId);
                     newOrder.setDate(date);
+                    newOrder.setUser(user);
+                    newOrder.setUploadLog(uploadLog);
                     newOrder.setTotal(0.0);
-                    newOrder.setProducts(new ArrayList<>());
                     user.getOrders().add(newOrder);
                     return newOrder;
                 });
 
+        // Criar e adicionar produto
         Products product = new Products();
-        product.setOrder(order);
         product.setProductId(productId);
         product.setValue(productValue);
-
+        product.setOrder(order);
         order.getProducts().add(product);
+
+        // Atualizar o total do pedido
         order.setTotal(order.getTotal() + productValue);
 
         log.info("Finalizado o processamento da linha do pedido");
